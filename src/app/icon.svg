@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Favicon: the cut-H alone (two ink stems + accent crossbar)
+       on the flat 4px-radius accent-tinted tile. Standalone asset - colors are
+       the light-theme tokens resolved to hex (accent 12% over paper / ink / accent). -->
+  <rect width="32" height="32" rx="4" fill="#dae6e5"/>
+  <g transform="translate(5.56 4.3) scale(1.8)">
+    <rect x="0" y="0" width="2.6" height="13" fill="#221f19"/>
+    <rect x="9" y="0" width="2.6" height="13" fill="#221f19"/>
+    <rect x="3.6" y="5.2" width="4.4" height="2.6" fill="#02717a"/>
+  </g>
+</svg>

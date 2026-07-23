@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an idea for HiroCRM
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-behavior
+    attributes:
+      label: Proposed behavior
+      description: What would you like to happen?
+    validations:
+      required: true
+
+  - type: input
+    id: affected
+    attributes:
+      label: Who does this affect
+      description: Which users or workflows would this change?
+    validations:
+      required: false

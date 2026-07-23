@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a problem with HiroCRM
+labels:
+  - bug
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Describe the problem you ran into.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps that trigger the problem.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      placeholder: e.g. 24.17.0
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      placeholder: e.g. Ubuntu 24.04, Windows 11, macOS 15
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate-passes
+    attributes:
+      label: Does npm run gate pass locally?
+      options:
+        - "Yes"
+        - "No"
+        - "Not tried"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Paste any relevant error output or log lines. This will be rendered as a code block, so no need for backticks.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: no-sensitive-data
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have not included real customer data or credentials in this report.
+          required: true

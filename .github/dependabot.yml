@@ -1,0 +1,28 @@
+# This project pins every dependency to an exact version, and the lockfile is
+# committed, so a fresh `npm ci` installs the combination the test suite ran
+# against. Version bumps are deliberate work reviewed against the full gate
+# (`npm run gate`); Dependabot pull requests are advisory signal, never
+# auto-merged.
+#
+# `open-pull-requests-limit: 0` disables version-update pull requests for an
+# ecosystem while keeping this configuration in place. It is set to 0 for the
+# v0.1.0 release so the published history starts clean rather than with a
+# backlog of bot pull requests opened against a deliberately frozen dependency
+# set. Raise it to resume version-update pull requests.
+#
+# Dependabot *security* alerts and security updates are controlled in the
+# repository's security settings, not here, and are unaffected by this limit.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0

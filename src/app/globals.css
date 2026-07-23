@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/*
+ * Design-token system, implemented verbatim as CSS custom properties.
+ * Every color/spacing/type decision flows from here; components
+ * reference semantic utilities only. Default Tailwind palettes and scales are
+ * wiped (`*: initial`) so banned classes (text-emerald-400, rounded-xl,
+ * animate-pulse, …) don't merely fail the tripwire grep — they don't compile.
+ */
+
+/* next-themes toggles a `dark` class on <html>. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Raw token values, light ("paper") — kept as plain custom properties (not
+ * only @theme) so the .dark block can swap them and so the wordmark SVG can
+ * reference var(--accent)/var(--muted) directly.
+ */
+:root {
+  --bg: oklch(0.975 0.004 85);
+  --surface: oklch(0.99 0.003 85);
+  --border: oklch(0.88 0.006 85);
+  --hair: color-mix(in srgb, oklch(0.88 0.006 85) 62%, transparent);
+  --ink: oklch(0.24 0.012 85);
+  --muted: oklch(0.50 0.010 85);
+  --accent: oklch(0.50 0.085 205);
+  --accent-h: oklch(0.44 0.09 205);
+  --onacc: #fff;
+  --ok: oklch(0.55 0.12 155);
+  --warn: oklch(0.62 0.13 75);
+  --danger: oklch(0.55 0.16 25);
+  /* Softened SLA text: full-strength signal belongs to badges only. */
+  --sla-due-soon: color-mix(in oklab, var(--warn) 72%, var(--ink));
+  --sla-overdue: color-mix(in oklab, var(--danger) 78%, var(--ink));
+  /* Badge foregrounds (approved export): signal hue eased toward ink so the
+     12–15% tints keep AA contrast in both themes. Derived from the theme-
+     scoped vars above, so one definition serves light and dark. */
+  --ok-fg: color-mix(in oklab, var(--ok) 76%, var(--ink));
+  --warn-fg: color-mix(in oklab, var(--warn) 76%, var(--ink));
+  --danger-fg: color-mix(in oklab, var(--danger) 80%, var(--ink));
+  /* Row hover = 6% accent over surface. Derived like --ok-fg above, so
+     one definition serves both themes — no .dark override needed since the
+     referenced vars already swap. */
+  --row-hover: color-mix(in oklab, var(--accent) 6%, var(--surface));
+  /* Dialog/alert backdrop dim — warm near-black in both themes (ink flips
+     light in dark mode, so the scrim gets its own token). */
+  --scrim: oklch(0.145 0.01 80 / 0.35);
+}
+
+/* Dark ("warm charcoal"). */
+.dark {
+  --bg: oklch(0.185 0.008 80);
+  --surface: oklch(0.225 0.009 80);
+  --border: oklch(0.31 0.010 80);
+  --hair: color-mix(in srgb, oklch(0.31 0.010 80) 62%, transparent);
+  --ink: oklch(0.90 0.006 85);
+  --muted: oklch(0.65 0.008 85);
+  --accent: oklch(0.72 0.09 200);
+  --accent-h: oklch(0.78 0.088 200);
+  /* Dark ink on the brighter dark-mode accent — white text here is a bug. */
+  --onacc: oklch(0.19 0.012 80);
+  --ok: oklch(0.75 0.13 155);
+  --warn: oklch(0.80 0.14 80);
+  --danger: oklch(0.72 0.15 25);
+  --scrim: oklch(0.08 0.008 80 / 0.55);
+}
+
+@theme inline {
+  /* Colors: the semantic set only — the default palette does not exist here. */
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-hair: var(--hair);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-onacc: var(--onacc);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-sla-due-soon: var(--sla-due-soon);
+  --color-sla-overdue: var(--sla-overdue);
+  --color-ok-fg: var(--ok-fg);
+  --color-warn-fg: var(--warn-fg);
+  --color-danger-fg: var(--danger-fg);
+  --color-scrim: var(--scrim);
+  --color-row-hover: var(--row-hover);
+
+  /* Type. Fonts arrive from next/font variables set on <html>. */
+  --font-*: initial;
+  --font-sans:
+    var(--font-plex-sans), "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    system-ui, sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-plex-sans), "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono:
+    var(--font-plex-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* Scale: 12 caption · 13 dense · 14 body · 16 section · 20 title · 28 KPI. */
+  --text-*: initial;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.5;
+  --text-dense: 13px;
+  --text-dense--line-height: 1.5;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-section: 16px;
+  --text-section--line-height: 1.2;
+  --text-title: 20px;
+  --text-title--line-height: 1.2;
+  --text-kpi: 28px;
+  --text-kpi--line-height: 1.2;
+
+  /* Weights 400/500/600 only, in app text without exception. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Letter-spacing +0.01em on all-caps labels only. */
+  --tracking-*: initial;
+  --tracking-caps: 0.01em;
+
+  /* Shape: 6px standard (`rounded`), 8px controls (`rounded-md`).
+     rounded-full/none survive as statics; rounded-xl/2xl no longer exist. */
+  --radius-*: initial;
+  --radius: 6px;
+  --radius-md: 8px;
+
+  /* Depth: borders and background shifts; one elevation for popups only. */
+  --shadow-*: initial;
+  --shadow-pop:
+    0 8px 24px -8px oklch(0 0 0 / 0.18), 0 2px 6px -2px oklch(0 0 0 / 0.1);
+
+  /* Zero looping animation anywhere: the namespace is empty. */
+  --animate-*: initial;
+
+  /* Motion: 120–160ms, ease-out, opacity/transform only. */
+  --ease-*: initial;
+  --ease-out: ease-out;
+}
+
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.5;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Motion is 120–160ms opacity/transform; none at all when reduced. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0.01ms !important;
+      animation: none !important;
+    }
+  }
+}

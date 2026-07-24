@@ -79,7 +79,7 @@ per advisory.
 Two earlier advisory families, against `sharp` and `xlsx`, were resolved before
 first publication; their resolutions are recorded below because each leaves a
 visible mark in `package.json`. Every other dependency is pinned to a version
-carrying no known advisory at the time of the v0.1.0 release.
+carrying no known advisory at the time of the v0.1.1 release.
 
 ### `postcss` dependency advisory (open, accepted)
 

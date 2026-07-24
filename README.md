@@ -287,7 +287,7 @@ Useful scripts:
 
 ## Support boundaries
 
-HiroCRM v0.1.0 is a first public preview, maintained by one person. What that
+HiroCRM v0.1.1 is an early public preview, maintained by one person. What that
 means concretely:
 
 - One shared administrator credential, described in

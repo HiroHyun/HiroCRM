@@ -12,7 +12,7 @@ export const strings = {
     name: "HiroCRM",
     tagline: "lead follow-up for small trade teams",
     description:
-      "Ultra-lightweight, self-hostable CRM for small foreign-trade teams",
+      "Ultra-lightweight, self-hostable CRM for small international-trade teams",
   },
   auth: {
     signIn: "Sign in",

@@ -1,17 +1,35 @@
-# HiroCRM
+<div align="center">
 
-![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
+<img src="screenshots/banner.png" width="820" alt="HiroCRM">
 
-Ultra-lightweight, self-hostable CRM for small foreign-trade teams.
+[![Gate](https://img.shields.io/github/actions/workflow/status/HiroHyun/HiroCRM/ci.yml?branch=main&label=gate)](https://github.com/HiroHyun/HiroCRM/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/HiroHyun/HiroCRM?sort=semver)](https://github.com/HiroHyun/HiroCRM/releases)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+![Node](https://img.shields.io/badge/node-%3E%3D24.17-5FA04E?logo=node.js&logoColor=white)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?logo=sqlite&logoColor=white)
 
+[Quick start](#quick-start) · [Configuration](#configuration) · [Operations](OPERATIONS.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+<details>
+<summary><b>Screenshots</b></summary>
+<br>
+<table align="center"><tr>
+<td align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="screenshots/dashboard-dark.png">
-  <img alt="HiroCRM dashboard: lead table with per-lead SLA status, ratings, touchpoint progress, and follow-up KPIs" src="screenshots/dashboard-light.png">
+  <img alt="HiroCRM dashboard: lead table with per-lead SLA status, ratings, touchpoint progress, and follow-up KPIs" src="screenshots/dashboard-light.png" height="300">
 </picture>
-
-Lead detail with the follow-up touchpoint timeline:
-
-<img alt="HiroCRM lead detail: contact fields, rating and status, screenshot uploads, and a dated touchpoint timeline" src="screenshots/lead-detail.png" width="420">
+<br><sub>Dashboard</sub>
+</td>
+<td align="center">
+<img alt="HiroCRM lead detail: contact fields, rating and status, screenshot uploads, and a dated touchpoint timeline" src="screenshots/lead-detail.png" height="300">
+<br><sub>Lead detail</sub>
+</td>
+</tr></table>
+</details>
 
 ## Features
 
@@ -31,8 +49,9 @@ Lead detail with the follow-up touchpoint timeline:
 
 ## Trust model
 
-HiroCRM uses **one shared admin credential** for the whole team — there is no
-per-person login. That means, deliberately:
+> [!IMPORTANT]
+> HiroCRM uses **one shared admin credential** for the whole team — there is no
+> per-person login. That means, deliberately:
 
 - No per-person identity or individual login.
 - No way to revoke a single person's access without changing the shared
@@ -71,10 +90,11 @@ deployment — `npm run build` followed by `npm run start` — see
 The database initializes itself on first run — there is no manual migration
 step to run.
 
-**A fresh install starts empty.** Nothing seeds automatically during install,
-build, or start. To fill the dashboard with fictional demo data so you can see
-the app working, run `npm run seed` before `npm run dev`. Skip it to begin with
-your own leads.
+> [!NOTE]
+> **A fresh install starts empty.** Nothing seeds automatically during install,
+> build, or start. To fill the dashboard with fictional demo data so you can see
+> the app working, run `npm run seed` before `npm run dev`. Skip it to begin with
+> your own leads.
 
 ## First run
 
@@ -143,10 +163,12 @@ short version:
   restarts automatically on crash and on host reboot.
 - The process needs a persistent, writable filesystem for `dev.db` (plus its
   `-wal`/`-shm` sidecars) and for `data/uploads/`, with filesystem
-  permissions that let the process user read and write both. Ephemeral or
-  serverless filesystems — where local disk writes don't survive a restart
-  or a new instance — are **not supported**; HiroCRM assumes a persistent,
-  single-instance filesystem. Run one instance per database file.
+  permissions that let the process user read and write both.
+
+> [!WARNING]
+> Ephemeral or serverless filesystems — where local disk writes don't survive a
+> restart or a new instance — are **not supported**; HiroCRM assumes a persistent,
+> single-instance filesystem. Run one instance per database file.
 
 ## Retention
 

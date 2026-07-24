@@ -219,17 +219,20 @@ built for one small team with one shared login, not a multi-user permission
 system. See [Trust model](#trust-model) for exactly what that does and
 doesn't give you.
 
-**`npm audit` reports advisories.** One advisory family remains, covered in
-full in [`SECURITY.md`](SECURITY.md): the `postcss` copy that Next.js bundles
-internally (moderate severity) is pinned by the framework at a version behind
-the fixed release. It runs at build time, processing this repository's own
-stylesheets; user input never reaches it. The advisory clears as soon as a
-Next.js release ships the patched copy.
+**`npm audit` reports advisories.** Two advisory families remain, both upstream
+pins this repository cannot move, and both covered in full in
+[`SECURITY.md`](SECURITY.md). One is the `postcss` copy that Next.js bundles
+internally — one moderate and one high advisory — which runs at build time on
+this repository's own stylesheets. The other is the `esbuild` copy that
+`drizzle-kit` reaches through its deprecated `@esbuild-kit/*` dependencies, a
+development tool that never runs in a deployment; `npm audit --omit=dev` drops
+it from the report for that reason. Each clears when its upstream package ships
+a release carrying the fixed version.
 
 Earlier advisories against `xlsx` and `sharp` are resolved: `xlsx` installs
-SheetJS's fixed 0.20.3 release from the official SheetJS CDN (the npm registry
-copy stops at 0.18.5), and an `overrides` entry holds `sharp` at the patched
-0.35 line. `SECURITY.md` records both resolutions.
+from `vendor/xlsx-0.20.3.tgz`, a committed copy of SheetJS's official 0.20.3
+tarball (the npm registry copy stops at 0.18.5), and an `overrides` entry holds
+`sharp` at the patched 0.35 line. `SECURITY.md` records both resolutions.
 
 **`npm run build` is failing without network access.** `next/font/google` is
 used for web fonts, and `npm run build` fetches them at build time, so build
@@ -249,11 +252,13 @@ not.
 Every dependency resolves to an exact, locked version and the lockfile is
 committed, so a fresh `npm ci` installs the combination the test suite actually
 ran against. Two entries in `package.json` look unusual on purpose: `xlsx`
-installs SheetJS's official CDN tarball, because the npm registry copy stops at
-0.18.5, and an `overrides` entry holds the `sharp` package Next.js installs at
-the patched 0.35 line. Version bumps are deliberate work reviewed against the
-full gate; `dependabot.yml` ships with `open-pull-requests-limit: 0` as a
-release-time choice, so raise that limit when you want version-update pull
+installs from `vendor/xlsx-0.20.3.tgz`, a copy of SheetJS's official 0.20.3
+tarball committed to this repository and verified by sha512 against the CDN
+integrity the lockfile previously recorded, so `npm ci` needs no SheetJS
+infrastructure; and an `overrides` entry holds the `sharp` package Next.js
+installs at the patched 0.35 line. Version bumps are deliberate work reviewed
+against the full gate; `dependabot.yml` ships with `open-pull-requests-limit: 0`
+as a release-time choice, so raise that limit when you want version-update pull
 requests to resume. See `package.json` for exact versions.
 
 ## Development

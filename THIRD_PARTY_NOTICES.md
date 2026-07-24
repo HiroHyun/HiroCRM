@@ -145,6 +145,18 @@ against the data loaded by `npm run seed`. Every name, contact, and company
 shown in them is fictional. They carry the same Apache-2.0 license as the
 rest of the repository.
 
+## Vendored dependency tarball
+
+`vendor/xlsx-0.20.3.tgz` is SheetJS Community Edition 0.20.3, published by
+SheetJS LLC under Apache-2.0. It was downloaded unmodified from the vendor's
+official distribution point,
+`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, and its npm-style
+integrity is
+`sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==`
+— the value `package-lock.json` recorded for the CDN install it replaces. The
+package retains its own upstream license and copyright notices, which travel
+inside the tarball.
+
 ## npm dependencies
 
 HiroCRM depends on a number of npm packages, listed with their exact pinned

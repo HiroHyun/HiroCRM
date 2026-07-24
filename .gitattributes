@@ -1,1 +1,4 @@
 * text=auto
+
+# Committed binaries stay exempt from text normalization.
+*.tgz binary

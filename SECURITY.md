@@ -68,29 +68,57 @@ size cap receives `413`.
 
 ### Dependency advisories
 
-`npm audit` currently reports one advisory family: the `postcss` copy that
-Next.js bundles internally. Two earlier advisory families, against `sharp`
-and `xlsx`, were resolved before first publication; their resolutions are
-recorded below because each leaves a visible mark in `package.json`. Every
-other dependency is pinned to a version carrying no known advisory at the
-time of the v0.1.0 release.
+Two advisory families are open, both accepted and documented below: the
+`postcss` copy that Next.js bundles internally, and a nested `esbuild` copy
+that `drizzle-kit` carries. `npm audit` reports both, counting six affected
+records across the two dependency chains. The `esbuild` chain is
+development-scoped, so `npm audit --omit=dev` narrows the report to `postcss`
+alone. GitHub's Dependabot reports the same two families as three alerts, one
+per advisory.
+
+Two earlier advisory families, against `sharp` and `xlsx`, were resolved before
+first publication; their resolutions are recorded below because each leaves a
+visible mark in `package.json`. Every other dependency is pinned to a version
+carrying no known advisory at the time of the v0.1.0 release.
 
 ### `postcss` dependency advisory (open, accepted)
 
 Next.js pins an exact internal copy of `postcss` inside its own dependency
-tree. GHSA-qx2v-qp2m-jg93 (moderate) reports an XSS risk in PostCSS's
-stringified output, fixed in `postcss@8.5.10` — ahead of the copy Next.js
-currently ships. Forcing a copy the framework pins exactly would mean
-building every release on a combination Next.js has never tested, and
-`npm audit fix --force` proposes downgrading Next.js to 9.3.3, which is not a
-viable remedy.
+tree. Two advisories apply to it. GHSA-qx2v-qp2m-jg93 (moderate) reports an XSS
+risk in PostCSS's stringified output, fixed in `postcss@8.5.10`.
+GHSA-6g55-p6wh-862q (**high**) is fixed in `postcss@8.5.12`. Both fixed
+versions are ahead of the copy Next.js currently ships. Forcing a copy the
+framework pins exactly would mean building every release on a combination
+Next.js has never tested, and `npm audit fix --force` proposes downgrading
+Next.js to 9.3.3, which is not a viable remedy.
 
 This copy runs at build time only, processing the repository's own
 stylesheets; no user-supplied input reaches it in dev or in production.
 HiroCRM's criterion for adopting the fix is the first Next.js release that
-bundles `postcss@8.5.10` or later, adopted through the normal dependency
-review and passing the full `npm run gate`. A report restating the existing
-`npm audit` output for this pin will be closed as already tracked.
+bundles `postcss@8.5.12` or later — the version that clears both advisories —
+adopted through the normal dependency review and passing the full
+`npm run gate`. A report restating the existing `npm audit` output for this pin
+will be closed as already tracked.
+
+### `esbuild` dependency advisory (open, accepted)
+
+GHSA-67mh-4wv8-2f99 (moderate) reports that esbuild's development server
+answers requests from any origin, letting any website read the responses it
+serves. It is fixed in `esbuild@0.25.0`.
+
+HiroCRM never runs `esbuild --serve`. The vulnerable copy is a
+development-scoped nested dependency, reached only through
+`drizzle-kit` → `@esbuild-kit/esm-loader` → `@esbuild-kit/core-utils`, which
+pins `esbuild@~0.18.20`; the top-level `esbuild` this project installs is
+already past the fix, and no copy of the vulnerable one ships in a build or
+runs in a deployment.
+
+`drizzle-kit@0.31.10` is the latest published release and still carries that
+chain, so no upgrade path exists — `npm audit fix --force` proposes downgrading
+`drizzle-kit` to 0.18.1, which is not a viable remedy. The `@esbuild-kit/*`
+packages are deprecated, merged into `tsx`, which `drizzle-kit` already depends
+on; the advisory clears when `drizzle-kit` drops them. A report restating this
+chain will be closed as already tracked.
 
 ### `sharp` dependency advisory (resolved)
 
@@ -112,10 +140,16 @@ own.
 SheetJS distributes current `xlsx` releases from its own CDN
 (`cdn.sheetjs.com`); the copy on the npm registry stops at `0.18.5`, which
 carries prototype-pollution and ReDoS advisories. HiroCRM installs
-`xlsx@0.20.3` directly from the official SheetJS CDN tarball, pinned by exact
-URL in `package.json` — the vendor's documented installation method — which
-includes the fixes for both (prototype pollution fixed in 0.19.3, ReDoS in
-0.20.2).
+`xlsx@0.20.3`, which includes the fixes for both (prototype pollution fixed in
+0.19.3, ReDoS in 0.20.2), from `vendor/xlsx-0.20.3.tgz` — a copy of the
+official SheetJS tarball committed to this repository. Its sha512 was verified
+against the CDN integrity the lockfile previously recorded, so the vendored
+bytes are the same bytes the project had been building against, and `npm ci`
+needs no SheetJS infrastructure to be reachable.
+
+Updating `xlsx` means replacing that tarball with the new official release,
+verifying its hash against the one SheetJS publishes, and running the full
+`npm run gate` before the change is committed.
 
 Spreadsheet import remains an operator-only action behind session
 authentication; it is not reachable by an unauthenticated request. The trust

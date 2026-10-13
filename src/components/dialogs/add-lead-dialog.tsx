@@ -63,6 +63,7 @@ export function AddLeadDialog({
   const [status, setStatus] = useState("Pending" as FollowUpStatus);
   const [screenshots, setScreenshots] = useState([] as string[]);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [duplicateId, setDuplicateId] = useState(null as string | null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
@@ -99,6 +100,7 @@ export function AddLeadDialog({
     screenshots.length > 0;
 
   function requestClose() {
+    if (uploading || submitting) return;
     if (dirty) {
       setConfirmingDiscard(true);
     } else {
@@ -117,6 +119,7 @@ export function AddLeadDialog({
   }
 
   async function submit() {
+    if (uploading || submitting) return;
     setSubmitting(true);
     setDuplicateId(null);
     const body = {
@@ -165,12 +168,16 @@ export function AddLeadDialog({
     submitLabel = strings.dialogs.addLeadTitle;
   }
 
-  const canSubmit = contact !== "" && repId !== null && !submitting;
+  const canSubmit = contact !== "" && repId !== null && !submitting && !uploading;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen, details) => {
+        if (!nextOpen && (uploading || submitting)) {
+          details.cancel();
+          return;
+        }
         if (!nextOpen && dirty) {
           details.cancel();
           setConfirmingDiscard(true);
@@ -183,6 +190,7 @@ export function AddLeadDialog({
         <div className="flex items-center justify-between gap-3">
           <DialogTitle>{strings.dialogs.addLeadTitle}</DialogTitle>
           <DialogClose
+            disabled={uploading || submitting}
             aria-label={strings.dialogs.close}
             className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted hover:text-ink"
           >
@@ -202,6 +210,7 @@ export function AddLeadDialog({
                 {strings.errors.duplicateContact}
                 <button
                   type="button"
+                  disabled={uploading || submitting}
                   onClick={() => {
                     onViewLead(duplicateId);
                     onOpenChange(false);
@@ -298,11 +307,16 @@ export function AddLeadDialog({
 
           <div className="flex flex-col gap-1">
             <span className="text-caption text-muted">{strings.fields.screenshots}</span>
-            <ScreenshotField value={screenshots} onChange={setScreenshots} />
+            <ScreenshotField
+              value={screenshots}
+              onChange={setScreenshots}
+              onUploadingChange={setUploading}
+              disabled={submitting}
+            />
           </div>
 
           <div className="mt-2 flex justify-end gap-2">
-            <Button onClick={requestClose}>{strings.dialogs.cancel}</Button>
+            <Button onClick={requestClose} disabled={uploading || submitting}>{strings.dialogs.cancel}</Button>
             <Button variant="primary" type="submit" disabled={!canSubmit}>
               {submitLabel}
             </Button>

@@ -192,27 +192,36 @@ function unlinkScreenshotUrl(url) {
 }
 
 /** Unlinks every screenshot URL for one lead; prints an honest per-file line. */
-function unlinkAllScreenshots(urls) {
+function unlinkAllScreenshots(client, urls) {
   let unlinked = 0;
   let failed = 0;
-  for (const url of urls) {
-    const result = unlinkScreenshotUrl(url);
-    if (!result.attempted) continue;
-    if (result.ok) {
-      unlinked++;
-      console.log(
-        result.alreadyGone
-          ? `    ${url} already gone (ENOENT) — treated as done`
-          : `    unlinked ${url}`,
-      );
-    } else {
-      failed++;
-      console.error(
-        `    FAILED to unlink ${url}: ${result.err.code ?? ""} ${result.err.message} — ` +
-          "file remains on disk and becomes a future orphan.",
-      );
+  // The mutation has already committed. A separate write lock prevents
+  // another writer adding a reference between this check and the unlink.
+  client.transaction(() => {
+    for (const url of urls) {
+      if (typeof url !== "string") continue;
+      const referenced = client.prepare(
+        "SELECT 1 FROM leads, json_each(leads.screenshot_urls) WHERE json_each.value = ? LIMIT 1",
+      ).get(url);
+      if (referenced) continue;
+      const result = unlinkScreenshotUrl(url);
+      if (!result.attempted) continue;
+      if (result.ok) {
+        unlinked++;
+        console.log(
+          result.alreadyGone
+            ? `    ${url} already gone (ENOENT) — treated as done`
+            : `    unlinked ${url}`,
+        );
+      } else {
+        failed++;
+        console.error(
+          `    FAILED to unlink ${url}: ${result.err.code ?? ""} ${result.err.message} — ` +
+            "file remains on disk and becomes a future orphan.",
+        );
+      }
     }
-  }
+  }).immediate();
   return { unlinked, failed };
 }
 
@@ -229,28 +238,35 @@ function runDeletePhase(client, apply, deleteCutoff) {
     )
     .all(deleteCutoff);
 
-  const deleteStmt = client.prepare("DELETE FROM leads WHERE id = ?");
+  const deleteStmt = client.prepare(
+    "DELETE FROM leads WHERE id = ? AND archived_at IS NOT NULL AND archived_at < ? " +
+    "RETURNING id, contact_info, archived_at, screenshot_urls",
+  );
 
+  let count = 0;
   let unlinked = 0;
   let unlinkFailed = 0;
   for (const row of rows) {
-    const urls = parseScreenshotUrls(row.screenshot_urls);
-    console.log(formatLeadLine("DELETE", row, urls));
+    // One conditional write revalidates the cutoff under SQLite's write lock.
+    const current = apply ? deleteStmt.get(row.id, deleteCutoff) : row;
+    if (!current) continue;
+    count++;
+    const urls = parseScreenshotUrls(current.screenshot_urls);
+    console.log(formatLeadLine("DELETE", current, urls));
     if (!apply) continue;
     // Commit the DB delete first (FK cascade removes touchpoints) — THEN
     // best-effort unlink the files. The DB is the source of truth; a failed
     // unlink is recoverable, a lost DB row is not.
-    deleteStmt.run(row.id);
-    const result = unlinkAllScreenshots(urls);
+    const result = unlinkAllScreenshots(client, urls);
     unlinked += result.unlinked;
     unlinkFailed += result.failed;
   }
 
   console.log(
-    `  phase 1 summary: ${rows.length} lead(s) ${apply ? "deleted" : "would be deleted"}` +
+    `  phase 1 summary: ${count} lead(s) ${apply ? "deleted" : "would be deleted"}` +
       (apply ? `, ${unlinked} screenshot file(s) unlinked, ${unlinkFailed} unlink failure(s)` : ""),
   );
-  return { count: rows.length, unlinked, unlinkFailed };
+  return { count, unlinked, unlinkFailed };
 }
 
 // ---------- Phase 2: strip screenshots off moderately old archived leads ----
@@ -270,25 +286,37 @@ function runStripPhase(client, apply, deleteCutoff, imageCutoff) {
     .all(deleteCutoff, imageCutoff);
 
   const stripStmt = client.prepare("UPDATE leads SET screenshot_urls = '[]' WHERE id = ?");
+  const strip = client.transaction((id) => {
+    const row = client.prepare(
+      "SELECT id, contact_info, archived_at, screenshot_urls FROM leads " +
+      "WHERE id = ? AND archived_at IS NOT NULL AND archived_at >= ? AND archived_at < ? " +
+      "AND screenshot_urls != '[]'",
+    ).get(id, deleteCutoff, imageCutoff);
+    if (row) stripStmt.run(id);
+    return row;
+  });
 
+  let count = 0;
   let unlinked = 0;
   let unlinkFailed = 0;
   for (const row of rows) {
-    const urls = parseScreenshotUrls(row.screenshot_urls);
-    console.log(formatLeadLine("STRIP", row, urls));
+    const current = apply ? strip.immediate(row.id) : row;
+    if (!current) continue;
+    count++;
+    const urls = parseScreenshotUrls(current.screenshot_urls);
+    console.log(formatLeadLine("STRIP", current, urls));
     if (!apply) continue;
     // Same commit-before-unlink ordering as phase 1.
-    stripStmt.run(row.id);
-    const result = unlinkAllScreenshots(urls);
+    const result = unlinkAllScreenshots(client, urls);
     unlinked += result.unlinked;
     unlinkFailed += result.failed;
   }
 
   console.log(
-    `  phase 2 summary: ${rows.length} lead(s) ${apply ? "stripped" : "would be stripped"}` +
+    `  phase 2 summary: ${count} lead(s) ${apply ? "stripped" : "would be stripped"}` +
       (apply ? `, ${unlinked} screenshot file(s) unlinked, ${unlinkFailed} unlink failure(s)` : ""),
   );
-  return { count: rows.length, unlinked, unlinkFailed };
+  return { count, unlinked, unlinkFailed };
 }
 
 // ---------- Phase 3: orphan sweep ----------
@@ -336,19 +364,9 @@ function runOrphanPhase(client, apply, now) {
   for (const name of orphans) {
     console.log(`  ORPHAN file=${name}`);
     if (!apply) continue;
-    try {
-      unlinkSync(path.join(UPLOADS_DIR, name));
-      unlinked++;
-      console.log(`    unlinked ${name}`);
-    } catch (err) {
-      if (err.code === "ENOENT") {
-        unlinked++; // already gone
-        console.log(`    ${name} already gone (ENOENT) — treated as done`);
-        continue;
-      }
-      unlinkFailed++;
-      console.error(`    FAILED to unlink ${name}: ${err.code ?? ""} ${err.message}`);
-    }
+    const result = unlinkAllScreenshots(client, [`/uploads/${name}`]);
+    unlinked += result.unlinked;
+    unlinkFailed += result.failed;
   }
 
   console.log(

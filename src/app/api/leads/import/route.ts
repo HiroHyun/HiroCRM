@@ -13,7 +13,7 @@ import {
   type FollowUpStatus,
 } from "../../../../lib/status";
 import { requireSession } from "../../../../server/auth";
-import { jsonError } from "../../../../server/http";
+import { checkContentLength, jsonError } from "../../../../server/http";
 import {
   FIELD_LIMITS,
   insertLead,
@@ -195,13 +195,8 @@ export async function POST(req: NextRequest) {
 
   // Same request budget as the upload route: Content-Length required and
   // capped before the body is buffered, exactly one "file" part.
-  const contentLength = Number(req.headers.get("content-length"));
-  if (!Number.isFinite(contentLength)) {
-    return jsonError(411, "length_required");
-  }
-  if (contentLength > MAX_UPLOAD_BYTES + UPLOAD_CONTENT_LENGTH_SLACK) {
-    return jsonError(413, "too_large");
-  }
+  const tooLarge = checkContentLength(req, MAX_UPLOAD_BYTES + UPLOAD_CONTENT_LENGTH_SLACK);
+  if (tooLarge) return tooLarge;
 
   let form: FormData;
   try {

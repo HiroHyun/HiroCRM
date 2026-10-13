@@ -95,6 +95,7 @@ export function LeadDetailDialog({
     return Date.now();
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [duplicateId, setDuplicateId] = useState(null as string | null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingLead, setDeletingLead] = useState(false);
@@ -135,7 +136,7 @@ export function LeadDetailDialog({
   }
 
   async function handleSave() {
-    if (draft === null) return;
+    if (draft === null || uploading || saving) return;
     setSaving(true);
     setDuplicateId(null);
     const result = await apiFetch<LeadWire>(`/api/leads/${leadId}`, {
@@ -258,6 +259,7 @@ export function LeadDetailDialog({
       notes !== "");
 
   function requestClose() {
+    if (uploading || saving) return;
     if (dirty) {
       setConfirmingDiscard(true);
     } else {
@@ -396,6 +398,8 @@ export function LeadDetailDialog({
             <ScreenshotField
               value={draft.screenshotUrls}
               onChange={(urls) => updateDraft({ screenshotUrls: urls })}
+              onUploadingChange={setUploading}
+              disabled={saving || deletingLead}
             />
           </div>
         </div>
@@ -414,12 +418,12 @@ export function LeadDetailDialog({
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+          <Button variant="ghost" onClick={() => setConfirmingDelete(true)} disabled={uploading || saving}>
             {strings.dialogs.deleteLead}
           </Button>
           <div className="flex gap-2">
-            <Button onClick={requestClose}>{strings.dialogs.cancel}</Button>
-            <Button variant="primary" onClick={handleSave} disabled={saving}>
+            <Button onClick={requestClose} disabled={uploading || saving}>{strings.dialogs.cancel}</Button>
+            <Button variant="primary" onClick={handleSave} disabled={saving || uploading}>
               {saveLabel}
             </Button>
           </div>
@@ -432,6 +436,10 @@ export function LeadDetailDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen, details) => {
+        if (!nextOpen && (uploading || saving)) {
+          details.cancel();
+          return;
+        }
         if (!nextOpen && dirty) {
           details.cancel();
           setConfirmingDiscard(true);
@@ -445,6 +453,7 @@ export function LeadDetailDialog({
         <div className="flex items-center justify-between gap-3">
           <DialogTitle>{strings.dialogs.leadDetailTitle}</DialogTitle>
           <DialogClose
+            disabled={uploading || saving}
             aria-label={strings.dialogs.close}
             className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted hover:text-ink"
           >

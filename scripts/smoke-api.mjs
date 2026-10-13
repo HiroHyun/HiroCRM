@@ -341,6 +341,24 @@ async function runSuite() {
   await login();
   console.log("smoke: logged in");
 
+  await check("chunked JSON and multipart requests without length → 411", async () => {
+    const cookie = [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+    for (const endpoint of ["/api/reps", "/api/upload", "/api/leads/import"]) {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("{}"));
+          controller.close();
+        },
+      });
+      const res = await fetch(BASE + endpoint, {
+        method: "POST", headers: { cookie, "content-type": "application/json" },
+        body, duplex: "half",
+      });
+      assertEq(res.status, 411, endpoint);
+      assertEq((await res.json()).error, "length_required", "error code");
+    }
+  });
+
   await check("one-row import → imported: 1 (+ country auto-detect)", async () => {
     const res = await api("/api/leads/import", {
       method: "POST",
@@ -606,7 +624,7 @@ async function runSuite() {
     );
   });
 
-  await check("lead DELETE removes screenshot file from disk", async () => {
+  await check("lead DELETE preserves shared screenshots until the last reference is deleted", async () => {
     assert(uploadedUrl !== null, "needs the upload above");
     const holder = await createLead({
       contactInfo: "screenshot-holder@example.com",
@@ -614,8 +632,16 @@ async function runSuite() {
       interest: "",
       screenshotUrls: [uploadedUrl],
     });
+    const second = await createLead({
+      contactInfo: "shared-screenshot@example.com", repName: "Bob",
+      screenshotUrls: [uploadedUrl],
+    });
     const del = await api(`/api/leads/${holder.id}`, { method: "DELETE" });
     assertEq(del.status, 200, "delete status");
+    assertEq((await api(uploadedUrl)).status, 200, "shared screenshot remains served");
+    const remaining = await getLead(second.id);
+    assert(remaining.lead.screenshotUrls.includes(uploadedUrl), "remaining lead keeps reference");
+    assertEq((await api(`/api/leads/${second.id}`, { method: "DELETE" })).status, 200, "delete last holder");
     const onDisk = existsSync(
       path.join(UPLOADS_DIR, uploadedUrl.slice("/uploads/".length)),
     );

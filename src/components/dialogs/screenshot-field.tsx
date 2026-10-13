@@ -26,9 +26,11 @@ const ACCEPT: Record<string, string[]> = Object.fromEntries(
 export interface ScreenshotFieldProps {
   value: string[];
   onChange: (urls: string[]) => void;
+  onUploadingChange: (uploading: boolean) => void;
+  disabled: boolean;
 }
 
-export function ScreenshotField({ value, onChange }: ScreenshotFieldProps) {
+export function ScreenshotField({ value, onChange, onUploadingChange, disabled }: ScreenshotFieldProps) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(0);
@@ -50,35 +52,40 @@ export function ScreenshotField({ value, onChange }: ScreenshotFieldProps) {
 
   async function uploadAll(files: File[]) {
     setUploading(true);
+    onUploadingChange(true);
     setTotal(files.length);
     setDone(0);
     const collected = [...value];
-    for (const file of files) {
-      const form = new FormData();
-      form.set("file", file);
-      const result = await apiFetch<UploadResponse>("/api/upload", {
-        method: "POST",
-        body: form,
-      });
-      if (result.kind === "unauthorized") {
-        router.replace("/login");
-        setUploading(false);
-        return;
+    try {
+      for (const file of files) {
+        const form = new FormData();
+        form.set("file", file);
+        const result = await apiFetch<UploadResponse>("/api/upload", {
+          method: "POST",
+          body: form,
+        });
+        if (result.kind === "unauthorized") {
+          router.replace("/login");
+          return;
+        }
+        if (result.kind === "error") {
+          if (result.status === 413) toast.error(strings.toasts.tooLarge);
+          else if (result.status === 415) toast.error(strings.toasts.unsupportedType);
+          else toast.error(strings.toasts.uploadFailed);
+        } else {
+          collected.push(result.data.url);
+          onChange([...collected]);
+        }
+        setDone((n) => n + 1);
       }
-      if (result.kind === "error") {
-        if (result.status === 413) toast.error(strings.toasts.tooLarge);
-        else if (result.status === 415) toast.error(strings.toasts.unsupportedType);
-        else toast.error(strings.toasts.uploadFailed);
-      } else {
-        collected.push(result.data.url);
-        onChange([...collected]);
-      }
-      setDone((n) => n + 1);
+    } finally {
+      setUploading(false);
+      onUploadingChange(false);
     }
-    setUploading(false);
   }
 
   function onDrop(accepted: File[], rejections: FileRejection[]) {
+    if (disabled || uploading) return;
     if (rejections.length > 0) reportRejections(rejections);
     if (accepted.length > 0) void uploadAll(accepted);
   }
@@ -86,7 +93,7 @@ export function ScreenshotField({ value, onChange }: ScreenshotFieldProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: ACCEPT,
     maxSize: MAX_UPLOAD_BYTES,
-    disabled: uploading,
+    disabled: disabled || uploading,
     multiple: true,
     onDrop,
   });
@@ -144,6 +151,7 @@ export function ScreenshotField({ value, onChange }: ScreenshotFieldProps) {
               </button>
               <button
                 type="button"
+                disabled={disabled || uploading}
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
                 aria-label={strings.upload.remove}
                 className="absolute top-0.5 right-0.5 inline-flex size-5 cursor-pointer items-center justify-center rounded border border-border bg-surface text-muted hover:text-ink"

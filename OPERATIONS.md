@@ -9,8 +9,8 @@ unsupported. For local development, see the repository's README.
 
 HiroCRM requires Node `>=24.17.0 <25`, as declared in `package.json`'s
 `engines` field. `.npmrc` in this repository sets only `save-exact=true`;
-it does not set `engine-strict`, so `npm ci` prints a warning rather than
-failing outright on an out-of-range Node version. Run the version this
+it does not set `engine-strict`, so `npm ci` permits installation and prints
+a warning on an out-of-range Node version. Run the version this
 declares — an out-of-range Node is not a tested configuration.
 
 ## Build and run
@@ -125,59 +125,54 @@ set. Restoring only one half leaves either upload files with no lead
 referencing them, or leads whose screenshot references point at files that
 aren't on disk.
 
-Shut the application down before backing up, so the write-ahead log
-checkpoints into `dev.db` and the file on disk is complete and consistent:
+Pause scheduled retention and wait for any running sweep to finish. Stop
+the application and keep all data writers stopped until the archive is
+complete. Record the deployed release tag or commit alongside the backup.
+
+Run these commands in Bash; they include SQLite sidecars and uploads when
+present:
 
 ```bash
 sudo systemctl stop hirocrm
 cd /srv/hirocrm
-tar czf /srv/backups/hirocrm-$(date +%Y%m%d-%H%M).tar.gz dev.db data/uploads
+backup_files=(dev.db)
+for entry in dev.db-wal dev.db-shm data/uploads; do
+    if [ -e "$entry" ]; then backup_files+=("$entry"); fi
+done
+tar czf /srv/backups/hirocrm-$(date +%Y%m%d-%H%M).tar.gz "${backup_files[@]}"
 sudo systemctl start hirocrm
 ```
 
-A clean shutdown checkpoints the write-ahead log into `dev.db` and removes
-the `-wal` and `-shm` sidecars, so `dev.db` on its own is the complete
-database at that point. Naming the sidecars explicitly in the `tar` command
-above would make it fail once they are gone.
-
-To capture a backup without stopping the service, use SQLite's own online
-backup instead of copying files, then archive the result together with the
-uploads:
-
-```bash
-cd /srv/hirocrm
-sqlite3 dev.db ".backup '/tmp/hirocrm-snapshot.db'"
-tar czf /srv/backups/hirocrm-$(date +%Y%m%d-%H%M).tar.gz \
-    -C /tmp hirocrm-snapshot.db -C /srv/hirocrm data/uploads
-rm /tmp/hirocrm-snapshot.db
-```
-
-Copying `dev.db` with `cp` or `tar` while the service is running produces a
-torn file: the sidecars hold writes that the main file does not yet contain.
+Check that `tar` succeeded, then resume scheduled retention. A SQLite
+online snapshot followed by a separate upload archive can lose attachments
+deleted between those steps. Keep the application and retention stopped
+for this procedure so the database and files describe the same state.
 
 Keep backups on separate storage from the production host, and keep more
 than one generation in case a recent backup turns out to be bad.
 
 ## Restore drill
 
-Test a restore into a separate location before trusting a backup, without
-touching the production instance:
+Test a restore in a fresh checkout of the release recorded with the backup.
+The checkout supplies `package.json` and the `drizzle/` migrations needed
+at startup. Replace the placeholders below with that release and archive:
 
 ```bash
-mkdir -p /srv/hirocrm-restore-test
+git clone /srv/hirocrm /srv/hirocrm-restore-test
 cd /srv/hirocrm-restore-test
+git checkout <backup-release-tag-or-commit>
+npm ci --include=dev
 tar xzf /srv/backups/hirocrm-<timestamp>.tar.gz
-# archives made with the online-backup method above hold the database under
-# its snapshot name; the application expects dev.db
-[ -f hirocrm-snapshot.db ] && mv hirocrm-snapshot.db dev.db
-cp -r /srv/hirocrm/node_modules /srv/hirocrm/.next /srv/hirocrm-restore-test/ 2>/dev/null || true
+cp .env.example .env
 ```
 
-From `/srv/hirocrm-restore-test`, with a `.env` pointing at a distinct port
-(set `PORT=3001` and, if the origin differs, `NEXTAUTH_URL` to match), run:
+Set the required credentials and secret in the test checkout's `.env`.
+Build that checkout, then start it on loopback port 3001 with its matching
+auth origin:
 
 ```bash
-npm run start
+npm run build
+NEXTAUTH_URL=http://localhost:3001 npm run start -- --hostname 127.0.0.1 --port 3001
 ```
 
 Sign in and confirm the lead count, a specific lead's touchpoint history,

@@ -1,5 +1,5 @@
-import { unlink } from "node:fs/promises";
-import { asc, desc, eq } from "drizzle-orm";
+import { unlinkSync } from "node:fs";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "../../../../db";
 import { leads, touchpoints } from "../../../../db/schema";
@@ -133,17 +133,25 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     if (!existing) return jsonError(404, "not_found");
     getDb().delete(leads).where(eq(leads.id, id)).run();
 
-    for (const url of existing.screenshotUrls) {
-      const name = url.slice("/uploads/".length);
-      if (!url.startsWith("/uploads/") || !isStoredUploadName(name)) continue;
-      try {
-        await unlink(uploadFilePath(name));
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.error(`DELETE /api/leads/[id]: unlink ${name} failed:`, err);
+    // Separate from the committed delete: hold a write lock while checking
+    // shared references and unlinking, so retention/API writers cannot race.
+    getDb().transaction((tx) => {
+      for (const url of existing.screenshotUrls) {
+        const name = url.slice("/uploads/".length);
+        if (!url.startsWith("/uploads/") || !isStoredUploadName(name)) continue;
+        const referenced = tx.select({ id: leads.id }).from(leads).where(
+          sql`exists (select 1 from json_each(${leads.screenshotUrls}) where value = ${url})`,
+        ).get();
+        if (referenced) continue;
+        try {
+          unlinkSync(uploadFilePath(name));
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.error(`DELETE /api/leads/[id]: unlink ${name} failed:`, err);
+          }
         }
       }
-    }
+    }, { behavior: "immediate" });
 
     const payload: LeadDeleteResponse = { ok: true };
     return NextResponse.json(payload);

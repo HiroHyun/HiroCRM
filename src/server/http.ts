@@ -28,19 +28,23 @@ export type JsonObjectResult =
  */
 export const MAX_JSON_BYTES = 1024 * 1024;
 
+/** Reject unbounded or malformed requests before buffering JSON or multipart. */
+export function checkContentLength(req: Request, maxBytes: number): NextResponse | null {
+  const raw = req.headers.get("content-length");
+  if (raw === null || !/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) {
+    return jsonError(411, "length_required");
+  }
+  return Number(raw) > maxBytes ? jsonError(413, "too_large") : null;
+}
+
 /**
  * The one guarded body parse every mutation route uses: malformed JSON or a
  * non-object body (array, null, primitive) → structured 400, an undeclared
  * or over-budget length → 411/413, never a 500.
  */
 export async function readJsonObject(req: Request): Promise<JsonObjectResult> {
-  const contentLength = Number(req.headers.get("content-length"));
-  if (!Number.isFinite(contentLength)) {
-    return { ok: false, response: jsonError(411, "length_required") };
-  }
-  if (contentLength > MAX_JSON_BYTES) {
-    return { ok: false, response: jsonError(413, "too_large") };
-  }
+  const denied = checkContentLength(req, MAX_JSON_BYTES);
+  if (denied) return { ok: false, response: denied };
   let parsed: unknown;
   try {
     parsed = await req.json();

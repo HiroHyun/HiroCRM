@@ -164,6 +164,7 @@ export function Dashboard() {
         const data: LeadsListResponse = await res.json();
         if (controller.signal.aborted) return;
         setPayload(data);
+        setState((prev) => prev.page === data.page ? prev : { ...prev, page: data.page });
         setNow(Date.now());
       } catch (err) {
         if ((err as Error).name === "AbortError") return;

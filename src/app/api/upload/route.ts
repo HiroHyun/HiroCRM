@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { NextResponse, type NextRequest } from "next/server";
 import type { UploadResponse } from "../../../lib/api-types";
 import { requireSession } from "../../../server/auth";
-import { jsonError } from "../../../server/http";
+import { checkContentLength, jsonError } from "../../../server/http";
 import {
   UPLOADS_DIR,
   uploadFilePath,
@@ -35,13 +35,8 @@ export async function POST(req: NextRequest) {
   // Multipart overhead means a legal max-size file arrives with
   // Content-Length > file size, so this check carries slack and file.size
   // below is the authoritative 413.
-  const contentLength = Number(req.headers.get("content-length"));
-  if (!Number.isFinite(contentLength)) {
-    return jsonError(411, "length_required");
-  }
-  if (contentLength > MAX_UPLOAD_BYTES + UPLOAD_CONTENT_LENGTH_SLACK) {
-    return jsonError(413, "too_large");
-  }
+  const tooLarge = checkContentLength(req, MAX_UPLOAD_BYTES + UPLOAD_CONTENT_LENGTH_SLACK);
+  if (tooLarge) return tooLarge;
 
   let form: FormData;
   try {

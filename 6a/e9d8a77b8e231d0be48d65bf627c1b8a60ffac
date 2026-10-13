@@ -1,0 +1,50 @@
+scripts/smoke-api.mjs
+  s_81bafd54c18584::t_e33d54855051e4 344-361,627,635-638,641-644
+OPERATIONS.md
+  s_81bafd54c18584::t_af840433639ae5 12-13
+  s_81bafd54c18584::t_facc4e533532da 128-133,138-142,146-149,156-158,161,163-164,166,169-171,174-175
+scripts/retention.mjs
+  s_81bafd54c18584::t_9bd60140740683 201-222,367-369
+  s_81bafd54c18584::t_e1ab715494dd14 195,198-200,224,241-244,246,250-255,260,266,269,289-299,303-307,310,316,319
+src/server/retention.test.ts
+  s_81bafd54c18584::t_87d02df301a235 80-96
+  s_81bafd54c18584::t_e33d54855051e4 1-78,121
+  s_81bafd54c18584::t_27ae7574fda5f7 79,97-120
+src/components/dialogs/lead-detail-dialog.tsx
+  s_81bafd54c18584::t_1e6324e3f96ecb 98,139,262,401-402,421,425-426,439-442,456
+src/app/api/leads/import/route.ts
+  s_81bafd54c18584::t_219c20a4c1995b 16,198-199
+src/components/dialogs/screenshot-field.test.ts
+  s_81bafd54c18584::t_74a4f4a4bb7f45 1-79
+src/components/dialogs/screenshot-field.tsx
+  s_81bafd54c18584::t_1e6324e3f96ecb 29-30,33,55,59-60,81-83,88,96,154
+  s_81bafd54c18584::t_facc4e533532da 61-79
+src/app/api/leads/[id]/route.ts
+  s_81bafd54c18584::t_e1ab715494dd14 1-2,136-151,154
+src/components/dialogs/add-lead-dialog.tsx
+  s_81bafd54c18584::t_1e6324e3f96ecb 66,103,122,171,177-180,193,213,310-315,319
+src/app/api/upload/route.ts
+  s_81bafd54c18584::t_219c20a4c1995b 5,38-39
+src/server/http.ts
+  s_81bafd54c18584::t_219c20a4c1995b 31-39,46-47
+src/server/http.test.ts
+  s_81bafd54c18584::t_85f6ffcb8e33a6 1-37
+src/components/dashboard/dashboard.tsx
+  s_81bafd54c18584::t_a970930b631c5a 167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ae9d8a77b8e231d0be48d65bf627c1b8a60ffac",
+  "prompts": {},
+  "sessions": {
+    "s_81bafd54c18584": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13375-0d33-7463-80a0-2a9d3947e41a",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "HiroHyun <info@hirohyun.com>"
+    }
+  }
+}
